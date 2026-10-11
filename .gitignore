@@ -1,0 +1,7 @@
+# Ignorar datasets gigantes locales para no superar el límite de 100MB de GitHub
+*.csv
+*.dat
+*.tmp
+*.log.tmp
+.DS_Store
+Thumbs.db
