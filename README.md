@@ -18,24 +18,24 @@ El objetivo primordial de esta práctica es implementar, analizar y validar de f
 Para este estudio se generaron datasets estructurados sintéticos con identificación del grupo (`grupo04`), registros de integrantes, marcas de tiempo y campos de verificación. Se evaluó el comportamiento del clúster frente a la caída abrupta de nodos de almacenamiento con dos volúmenes de datos: **1 GB (8 bloques)** y **10 GB (80 bloques)**, comprobando la resiliencia del sistema y la continuidad operativa de lectura sin pérdida de datos.
 
 ```mermaid
-graph TD
-    Client[Cliente / Aplicación / Python / CLI] -->|Metadatos & Ubicaciones| NN[NameNode :9870 / :9000]
-    Client -->|Streaming I/O Bloques| DN1[DataNode 1 :9864]
-    Client -->|Streaming I/O Bloques| DN2[DataNode 2 :9865]
-    Client -->|Streaming I/O Bloques| DN3[DataNode 3 :9866]
+flowchart TD
+    Client["Cliente / Scripts / CLI"] -->|"Consulta Metadatos"| NN["NameNode (:9870 / :9000)"]
+    Client -->|"Streaming I/O Bloques"| DN1["DataNode 1 (:9864)"]
+    Client -->|"Streaming I/O Bloques"| DN2["DataNode 2 (:9865)"]
+    Client -->|"Streaming I/O Bloques"| DN3["DataNode 3 (:9866)"]
     
-    NN -.->|Heartbeat 3s & Block Report| DN1
-    NN -.->|Heartbeat 3s & Block Report| DN2
-    NN -.->|Heartbeat 3s & Block Report| DN3
+    NN -.->|"Heartbeat & Block Report"| DN1
+    NN -.->|"Heartbeat & Block Report"| DN2
+    NN -.->|"Heartbeat & Block Report"| DN3
 
-    DN1 ===|Replicación Pipeline HDFS (Factor 2)| DN2
-    DN2 ===|Replicación Pipeline HDFS (Factor 2)| DN3
-    DN3 ===|Replicación Pipeline HDFS (Factor 2)| DN1
+    DN1 <-->|"Pipeline Replicación (Factor 2)"| DN2
+    DN2 <-->|"Pipeline Replicación (Factor 2)"| DN3
+    DN3 <-->|"Pipeline Replicación (Factor 2)"| DN1
 
-    subgraph "Capa de Cómputo YARN"
-        RM[YARN ResourceManager :8088]
-        NM[YARN NodeManager :8042]
-        JHS[MapReduce JobHistory :8188]
+    subgraph YARN["Capa de Cómputo YARN"]
+        RM["ResourceManager (:8088)"]
+        NM["NodeManager (:8042)"]
+        JHS["JobHistoryServer (:8188)"]
         RM --- NM
         RM --- JHS
     end
