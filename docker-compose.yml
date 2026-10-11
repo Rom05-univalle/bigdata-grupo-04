@@ -42,6 +42,10 @@ services:
       - "9000:9000"   # Puerto RPC/IPC de NameNode
     networks:
       - hadoop-network
+    extra_hosts:
+      - "datanode1:172.18.0.4"
+      - "datanode2:172.18.0.3"
+      - "datanode3:172.18.0.5"
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
       - ./app:/app
