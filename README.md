@@ -226,7 +226,6 @@ La siguiente tabla resume y contrasta de manera cuantitativa los resultados de a
 
 ## 9. Conclusiones
 
-1. **Validación de la Tolerancia a Fallos:** Se comprobó empíricamente que una política de replicación $R \ge 2$ en un clúster multinodo garantiza la disponibilidad absoluta de los datos ante la pérdida de un nodo de cómputo o almacenamiento.
-2. **Escalabilidad y Comportamiento Representativo:** El experimento con 10 GB demostró el comportamiento a gran escala de HDFS: el incremento de 8 a 80 bloques evidenció la robustez del NameNode para administrar 160 réplicas físicas y coordinar la lectura descentralizada sin penalización en los tiempos de respuesta.
-3. **Persistencia y Resiliencia en Contenedores:** Mediante el uso de Docker Named Volumes, los bloques de datos y la metadata de HDFS persisten en el almacenamiento del anfitrión, permitiendo reiniciar o recuperar nodos sin pérdida de integridad.
-4. **Cumplimiento de Requisitos:** Todos los directorios, archivos y evidencias respetan rigurosamente el identificador oficial `grupo04`, satisfaciendo la totalidad de los criterios exigidos en la práctica LG15.
+1. La configuración con factor de replicación 2 sobre 3 DataNodes permitió comprobar que HDFS mantiene la disponibilidad de los archivos ante la caída de un nodo. En ambos experimentos (1 GB y 10 GB), las operaciones de lectura respondieron sin errores al redirigirse hacia los DataNodes que conservaban las réplicas sanas.
+2. El dataset de 10 GB permitió analizar un volumen más representativo del sistema distribuido (80 bloques de 128 MB y 160 réplicas físicas) en comparación con los 8 bloques del archivo de 1 GB, mostrando cómo el NameNode distribuye la carga entre los nodos disponibles.
+3. La persistencia mediante volúmenes con nombre en Docker garantiza que tanto los bloques en los DataNodes como los metadatos del NameNode se mantengan en el disco local, permitiendo reiniciar o detener los contenedores sin perder los datos cargados en HDFS.
