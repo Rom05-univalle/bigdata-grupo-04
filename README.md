@@ -65,7 +65,7 @@ flowchart TD
 
 ## 4. Identificación del Grupo y Estructura en HDFS
 
-Para garantizar la autoría del grupo, la jerarquía de directorios en HDFS y los nombres de archivos utilizan el identificador oficial `grupo04`:
+La jerarquía de directorios en HDFS y los nombres de archivos utilizan el identificador oficial `grupo04`:
 
 ```text
 /grupo04/
