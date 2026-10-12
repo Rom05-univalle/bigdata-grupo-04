@@ -229,3 +229,39 @@ La siguiente tabla resume y contrasta de manera cuantitativa los resultados de a
 1. La configuración con factor de replicación 2 sobre 3 DataNodes permitió comprobar que HDFS mantiene la disponibilidad de los archivos ante la caída de un nodo. En ambos experimentos (1 GB y 10 GB), las operaciones de lectura respondieron sin errores al redirigirse hacia los DataNodes que conservaban las réplicas sanas.
 2. El dataset de 10 GB permitió analizar un volumen más representativo del sistema distribuido (80 bloques de 128 MB y 160 réplicas físicas) en comparación con los 8 bloques del archivo de 1 GB, mostrando cómo el NameNode distribuye la carga entre los nodos disponibles.
 3. La persistencia mediante volúmenes con nombre en Docker garantiza que tanto los bloques en los DataNodes como los metadatos del NameNode se mantengan en el disco local, permitiendo reiniciar o detener los contenedores sin perder los datos cargados en HDFS.
+
+---
+
+## 10. Cuestionario de Análisis
+
+### Pregunta 1: ¿Por qué HDFS puede continuar proporcionando el archivo aunque un DataNode haya fallado?
+Porque cada bloque del archivo cuenta con una copia idéntica almacenada en otro DataNode del clúster debido al factor de replicación 2. Cuando el cliente intenta leer y el nodo primario no responde, el NameNode redirige la solicitud hacia el nodo que conserva la réplica viva, permitiendo completar la lectura sin interrupción.
+
+### Pregunta 2: ¿Qué habría ocurrido si el factor de replicación hubiera sido 1?
+Cada bloque habría tenido una única copia física en todo el clúster. Al apagarse el DataNode que contenía parte de esos bloques, esos fragmentos habrían quedado inaccesibles (`Missing blocks`). El archivo habría quedado corrupto para cualquier operación de lectura que requiriera los sectores afectados.
+
+### Pregunta 3: ¿Qué habría ocurrido si hubieran fallado dos DataNodes simultáneamente?
+Con 3 DataNodes y factor de replicación 2, cada bloque se reparte entre 2 máquinas distintas. Si caen dos DataNodes al mismo tiempo, los bloques cuyas dos réplicas estaban alojadas justamente en esos dos nodos quedan con cero copias activas en la red. El archivo pierde su integridad y la lectura falla hasta que vuelva a encenderse al menos uno de los nodos caídos.
+
+### Pregunta 4: ¿Por qué un factor de replicación de 2 no significa necesariamente que existan dos copias completas del archivo en dos DataNodes?
+Porque HDFS no replica archivos enteros, sino bloques individuales de 128 MB. Cada bloque se ubica de forma independiente siguiendo la política de distribución del NameNode. En un archivo de 8 bloques, el bloque 0 puede estar repartido entre DN1 y DN3, mientras que el bloque 2 se encuentra en DN2 y DN3. Las copias quedan distribuidas entre los tres DataNodes, de modo que ningún par de nodos contiene necesariamente el archivo íntegro por sí solo.
+
+### Pregunta 5: ¿Cuál es la relación entre tamaño de bloque y número de bloques?
+Es una relación inversamente proporcional para un mismo volumen de datos:
+
+$$\text{Número de bloques} = \left\lceil \frac{\text{Tamaño total del archivo}}{\text{Tamaño de bloque}} \right\rceil$$
+
+Un tamaño de bloque grande produce menos bloques, lo que reduce el consumo de memoria RAM en el NameNode para gestionar metadatos, aunque disminuye la cantidad de tareas concurrentes si el archivo es pequeño. Un tamaño de bloque chico genera más bloques para procesar en paralelo, pero sobrecarga la tabla de metadatos del NameNode.
+
+### Pregunta 6: ¿Por qué el dataset de 10 GB permite observar un comportamiento más representativo de un sistema distribuido que el dataset de 1 GB?
+El archivo de 1 GB solo genera 8 bloques (16 réplicas físicas), una cantidad pequeña donde la asignación aleatoria puede no reflejar el comportamiento general del clúster. El archivo de 10 GB genera 80 bloques y 160 réplicas físicas distribuidas en disco, lo que permite evaluar el balanceo de carga real entre los tres nodos, el tráfico de red sostenido y el impacto sobre decenas de bloques sub-replicados al momento de inducir la falla.
+
+### Pregunta 7: ¿Qué sucede con los bloques que tenían una réplica en el DataNode que falló?
+Pasan al estado de sub-replicación (`Under-replicated`). Siguen disponibles para lectura porque conservan una copia activa en otro nodo, pero ya no cumplen con la política de tener 2 copias físicas. Si el DataNode permanece desconectado más allá del tiempo límite de espera (*Heartbeat timeout*, normalmente 10.5 minutos), el NameNode ordena copiar esos bloques hacia los DataNodes activos restantes para recuperar el factor de replicación 2.
+
+### Pregunta 8: ¿Quién administra la ubicación y replicación de los bloques: el cliente, el DataNode o el NameNode?
+El NameNode. Es el único nodo que mantiene en memoria el mapeo completo del sistema de archivos y decide en qué DataNodes se almacena cada réplica. El cliente únicamente solicita las direcciones de red para conectarse a leer o escribir datos, y los DataNodes se limitan a almacenar bloques en sus discos locales y reportar periódicamente su inventario al NameNode.
+
+### Pregunta 9: ¿Qué diferencia existe entre disponibilidad del archivo y cumplimiento del factor de replicación después de una falla?
+La disponibilidad significa que el cliente puede leer el archivo completo sin errores porque cada bloque cuenta con al menos una réplica viva. El cumplimiento del factor de replicación exige que cada bloque mantenga activas las 2 copias configuradas. Durante la caída de un nodo, el archivo mantiene su disponibilidad al 100%, pero pierde el cumplimiento del factor de replicación debido a la presencia de bloques sub-replicados.
+
